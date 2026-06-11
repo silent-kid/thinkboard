@@ -1,39 +1,47 @@
-// ! const express = require('express'); -> type = commonjs
 import express from "express";
 import cors from "cors";
+import dotenv from "dotenv";
+import path from "path";
+
 import notesRoutes from "./routes/notesRoutes.js";
 import { connectDB } from "./config/db.js";
-import dotenv from "dotenv";
-import rateLimiter from "./middleware/rateLimit.js";
+import rateLimiter from "./middleware/rateLimiter.js";
 
 dotenv.config();
 
 const app = express();
+const PORT = process.env.PORT || 5000;
+const __dirname = path.resolve();
 
-// ? first running the app then connecting to database - wrong
-// connectDB();
-
-// * MIDDLEWARE
-
-// > custom middleware
-//  app.use((req,res,next)=>{
-//  console.log(`Req method is ${req.method} and req url is ${req.url}`);
-//   next();
-// })
-
-// ! access to req.body because of this
-app.use(cors({
-  origin: 'http://localhost:5173',
-}));
-app.use(express.json());
+// middleware
+if (process.env.NODE_ENV !== "production") {
+  app.use(
+    cors({
+      origin: "http://localhost:5173",
+    })
+  );
+}
+app.use(express.json()); // this middleware will parse JSON bodies: req.body
 app.use(rateLimiter);
+
+// our simple custom middleware
+// app.use((req, res, next) => {
+//   console.log(`Req method is ${req.method} & Req URL is ${req.url}`);
+//   next();
+// });
 
 app.use("/api/notes", notesRoutes);
 
-// > Connect to database first and then start the app
+if (process.env.NODE_ENV === "production") {
+  app.use(express.static(path.join(__dirname, "../frontend/dist")));
+
+  app.get("*", (req, res) => {
+    res.sendFile(path.join(__dirname, "../frontend", "dist", "index.html"));
+  });
+}
 
 connectDB().then(() => {
-  app.listen(5000, () => {
-    console.log("APP Running on PORT 5000");
+  app.listen(PORT, () => {
+    console.log("Server started on PORT:", PORT);
   });
 });
