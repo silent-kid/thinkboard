@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
-import RateLimitedUI from "../components/RateLImitedUI";
-import axios from 'axios'
+import RateLimitedUI from "../components/RateLimitedUI";
+import api from "../lib/axios";
 import toast from "react-hot-toast";
-import NotesNotFound from "../components/NotesNotFound";
 import NoteCard from "../components/NoteCard";
+import NotesNotFound from "../components/NotesNotFound";
 
 const HomePage = () => {
   const [isRateLimited, setIsRateLimited] = useState(false);
@@ -14,23 +14,29 @@ const HomePage = () => {
   useEffect(() => {
     const fetchNotes = async () => {
       try {
-        // > if we dont use axios 
-        // const res = await fetch("http://localhost:5000/api/notes");
-        // const data = await res.json();
-        // console.log(data);
-        
-        const res = await axios.get("/notes");
-        setNotes(res.data);
+        const res = await api.get("/notes");
 
-        setIsRateLimited(false);
+        console.log("Notes Response:", res.data);
 
+        // Ensure notes is always an array
+        let notesData = [];
 
-      } catch (error) {
-        console.log("Error fetching notes",error)
-        if(error.response?.status === 429){
-          setIsRateLimited(true);
+        if (Array.isArray(res.data)) {
+          notesData = res.data;
+        } else if (Array.isArray(res.data?.notes)) {
+          notesData = res.data.notes;
+        } else if (Array.isArray(res.data?.data)) {
+          notesData = res.data.data;
         }
-        else{
+
+        setNotes(notesData);
+        setIsRateLimited(false);
+      } catch (error) {
+        console.log("Error fetching notes:", error);
+
+        if (error.response?.status === 429) {
+          setIsRateLimited(true);
+        } else {
           toast.error("Failed to load notes");
         }
       } finally {
@@ -42,21 +48,30 @@ const HomePage = () => {
   }, []);
 
   return (
-     <div className="min-h-screen">
+    <div className="min-h-screen">
       <Navbar />
 
       {isRateLimited && <RateLimitedUI />}
 
       <div className="max-w-7xl mx-auto p-4 mt-6">
-        {loading && <div className="text-center text-primary py-10">Loading notes...</div>}
+        {loading && (
+          <div className="text-center text-primary py-10">
+            Loading notes...
+          </div>
+        )}
 
-        {notes.length === 0 && !isRateLimited && <NotesNotFound />}
-        
+        {!loading && notes.length === 0 && !isRateLimited && (
+          <NotesNotFound />
+        )}
 
-        {notes.length > 0 && !isRateLimited && (
+        {!loading && notes.length > 0 && !isRateLimited && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {notes.map((note) => (
-              <NoteCard key={note._id} note={note} setNotes={setNotes} />
+              <NoteCard
+                key={note._id}
+                note={note}
+                setNotes={setNotes}
+              />
             ))}
           </div>
         )}
