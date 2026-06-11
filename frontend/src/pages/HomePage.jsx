@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
+// was an error
 import RateLimitedUI from "../components/RateLimitedUI";
 import api from "../lib/axios";
 import toast from "react-hot-toast";
